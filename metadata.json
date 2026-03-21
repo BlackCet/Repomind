@@ -1,0 +1,5 @@
+{
+  "name": "RepoMind AI",
+  "description": "AI-powered GitHub repository analyzer, visualizer, and deployment assistant.",
+  "requestFramePermissions": []
+}

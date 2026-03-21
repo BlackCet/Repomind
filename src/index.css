@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@layer base {
+  .prose {
+    @apply text-zinc-300;
+  }
+  .prose h1, .prose h2, .prose h3, .prose h4 {
+    @apply text-white font-bold;
+  }
+  .prose code {
+    @apply bg-zinc-900 px-1.5 py-0.5 rounded text-emerald-400 font-mono text-sm;
+  }
+  .prose pre {
+    @apply bg-zinc-900 p-4 rounded-xl border border-white/10 overflow-x-auto;
+  }
+  .prose a {
+    @apply text-emerald-500 hover:text-emerald-400 underline underline-offset-4;
+  }
+}

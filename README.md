@@ -97,6 +97,7 @@ GitHub routes accept `owner` and `repo` query parameters. Render routes require 
 └── README.md
 ```
 
-## License
+## Deployed Link
+https://repomind-sfs1.onrender.com/
 
 Add the applicable project license here.

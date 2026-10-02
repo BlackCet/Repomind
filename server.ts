@@ -9,9 +9,22 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  // FIXED: Use Render's dynamic port or default to 3000 locally
+  const PORT = process.env.PORT || 3000;
 
   app.use(express.json());
+
+  // Helper to dynamically attach the GitHub token if it exists
+  const getGithubHeaders = () => {
+    const headers: Record<string, string> = {
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "RepoMind-AI",
+    };
+    if (process.env.GITHUB_TOKEN) {
+      headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+    }
+    return headers;
+  };
 
   // GitHub Proxy to avoid CORS and handle basic auth if needed
   app.get("/api/github/repo", async (req, res) => {
@@ -23,11 +36,7 @@ async function startServer() {
     try {
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${repoPath}`;
       const response = await axios.get(url, {
-        headers: { 
-  Accept: "application/vnd.github.v3+json", 
-  "User-Agent": "RepoMind-AI",
-  Authorization: `Bearer ${process.env.GITHUB_TOKEN}` 
-},
+        headers: getGithubHeaders(),
       });
       res.json(response.data);
     } catch (error: any) {
@@ -42,13 +51,12 @@ async function startServer() {
     try {
       const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
       const response = await axios.get(url, {
-        headers: {
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "RepoMind-AI",
-        },
+        // FIXED: Authenticate tree fetch to bypass 60/hr rate limit
+        headers: getGithubHeaders(), 
       });
       res.json(response.data);
     } catch (error: any) {
+      console.error("GitHub Tree Fetch Error:", error.response?.data || error.message);
       res.status(error.response?.status || 500).json({
         error: error.response?.data?.message || "Failed to fetch tree from GitHub",
       });
@@ -57,14 +65,21 @@ async function startServer() {
 
   app.get("/api/github/raw", async (req, res) => {
     const { url } = req.query;
-    if (!url) return res.status(400).json({ error: "URL is required" });
+    if (!url || typeof url !== "string") return res.status(400).json({ error: "URL is required" });
 
     try {
-      const response = await axios.get(url as string, {
-        headers: { "User-Agent": "RepoMind-AI" },
-      });
+      const headers: Record<string, string> = { "User-Agent": "RepoMind-AI" };
+      
+      // FIXED: Only attach the GitHub token if the destination is officially GitHub
+      const parsedUrl = new URL(url);
+      if (parsedUrl.hostname === "raw.githubusercontent.com" && process.env.GITHUB_TOKEN) {
+        headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+      }
+
+      const response = await axios.get(url, { headers });
       res.send(response.data);
     } catch (error: any) {
+      console.error("GitHub Raw Fetch Error:", error.response?.data || error.message);
       res.status(error.response?.status || 500).send("Failed to fetch raw content");
     }
   });
@@ -112,7 +127,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  // FIXED: Explicitly listen on 0.0.0.0 for cloud providers
+  app.listen(PORT as number, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
